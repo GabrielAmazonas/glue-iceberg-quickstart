@@ -1,0 +1,95 @@
+Description: "AWS Glue Job with Apache Iceberg Configured - Specifically for AWS Glue 2.0 - PySpark 3.0 and Apache Iceberg"
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Bucket name for the S3 bucket resource
+    AllowedPattern: ^.*[^0-9]$
+    ConstraintDescription: Must end with non-numeric character.
+  GlueJobName:
+    Type: String
+    Description: Glue Job name for the Job resource
+    AllowedPattern: ^.*[^0-9]$
+    ConstraintDescription: Must end with non-numeric character.
+  IcebergJobName:
+    Type: String
+    Description: Name of the Hudi Spark Jar file ("Ending in .py")
+    AllowedPattern: ^.*.py
+    ConstraintDescription: Must end with .py.
+  IcebergSparkJarName:
+    Type: String
+    Description: Name of the Iceberg Spark Jar file ("Ending in .jar")
+    AllowedPattern: ^.*.jar
+    ConstraintDescription: Must end .jar.
+  IcebergExtJarName:
+    Type: String
+    Description: Name of the Iceberg Extensions Jar file ("Ending in .jar")
+    AllowedPattern: ^.*.jar
+    ConstraintDescription: Must end .jar.
+  AwsUrlConnJarName:
+    Type: String
+    Description: Name of the AWS URL Connections Jar file ("Ending in .jar")
+    AllowedPattern: ^.*.jar
+    ConstraintDescription: Must end .jar.
+  AwsBundleJarName:
+    Type: String
+    Description: Name of the AWS Bundle Jar file ("Ending in .jar")
+    AllowedPattern: ^.*.jar
+    ConstraintDescription: Must end .jar.
+Resources:
+  MyJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Join:
+        - "-"
+        - - Ref: S3BucketName
+          - Ref: AWS::AccountId
+  MyJob:
+    Type: AWS::Glue::Job
+    Properties:
+      GlueVersion: "3.0"
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${S3BucketName}-${AWS::AccountId}/jobs/${IcebergJobName}"
+      DefaultArguments:
+        "--job-bookmark-option": "job-bookmark-enable"
+        "--spark-event-logs-path" : !Sub "s3://${S3BucketName}-${AWS::AccountId}/tmp/spark-logs"
+        "--enable-glue-datacatalog": ""
+        "--base_s3_path" : !Sub "s3a://${S3BucketName}-${AWS::AccountId}"
+        "--s3_iceberg_path" : !Sub "s3://${S3BucketName}-${AWS::AccountId}/iceberg"
+        "--fake_row_count" : "100"
+        "--extra-jars": !Sub "s3://${S3BucketName}-${AWS::AccountId}/jars/${IcebergSparkJarName},s3://${S3BucketName}-${AWS::AccountId}/jars/${IcebergExtJarName},s3://${S3BucketName}-${AWS::AccountId}/jars/${AwsUrlConnJarName},s3://${S3BucketName}-${AWS::AccountId}/jars/${AwsBundleJarName}"
+        "--additional-python-modules": "faker==11.3.0"
+      ExecutionProperty:
+        MaxConcurrentRuns: 2
+      MaxRetries: 0
+      Name: !Ref GlueJobName
+      Role: !Ref MyJobRole
+      WorkerType: "Standard"
+      NumberOfWorkers: 2
+      Timeout: 10
+  

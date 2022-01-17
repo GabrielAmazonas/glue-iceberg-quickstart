@@ -1,0 +1,2 @@
+aws cloudformation deploy --profile dev --template-file GlueJobPySparkIceberg.yaml --stack-name glue-job-iceberg-resource --capabilities CAPABILITY_NAMED_IAM --parameter-overrides S3BucketName=glue-iceberg-bucket IcebergSparkJarName=iceberg-spark3-runtime-0.12.1.jar IcebergExtJarName=iceberg-spark3-extensions-0.12.1.jar AwsBundleJarName=bundle-2.17.100.jar AwsUrlConnJarName=url-connection-client-2.17.100.jar GlueJobName=glue-job-iceberg-resource IcebergJobName=job.py
+
